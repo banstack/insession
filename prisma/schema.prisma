@@ -1,0 +1,75 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique @db.VarChar(20)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  sessions  Session[]
+
+  @@map("users")
+}
+
+// Session Model
+model Session {
+  id                   String        @id @default(uuid())
+  userId               String        @map("user_id")
+  currentActivityIndex Int           @default(0) @map("current_activity_index")
+  elapsedSeconds       Int           @default(0) @map("elapsed_seconds")
+  status               SessionStatus @default(NOT_STARTED)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities Activity[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("sessions")
+}
+
+// Activity Model
+model Activity {
+  id              String   @id @default(uuid())
+  sessionId       String   @map("session_id")
+  name            String   @db.VarChar(255)
+  durationMinutes Int      @map("duration_minutes")
+  durationSeconds Int      @map("duration_seconds")
+  elapsedSeconds  Int      @default(0) @map("elapsed_seconds")
+  completed       Boolean  @default(false)
+  color           String   @db.VarChar(7)
+  orderIndex      Int      @map("order_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, orderIndex])
+  @@map("activities")
+}
+
+// Enums
+enum SessionStatus {
+  NOT_STARTED @map("not_started")
+  IN_PROGRESS @map("in_progress")
+  PAUSED
+  COMPLETED
+
+  @@map("session_status")
+}
