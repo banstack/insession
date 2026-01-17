@@ -7,6 +7,7 @@ import RegisterForm from './components/Auth/RegisterForm';
 import CreateSession from './components/Session/CreateSession';
 import SessionList from './components/Session/SessionList';
 import SessionTimer from './components/Session/SessionTimer';
+import LabelsManager from './components/Labels/LabelsManager';
 import { useAuth } from './context/AuthContext';
 
 function AppRoutes() {
@@ -65,6 +66,19 @@ function AppRoutes() {
               <Navbar />
               <main className="py-8 px-4">
                 <SessionTimer />
+              </main>
+            </div>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/labels"
+        element={
+          <ProtectedRoute>
+            <div className="min-h-screen bg-gray-50">
+              <Navbar />
+              <main className="py-8 px-4">
+                <LabelsManager />
               </main>
             </div>
           </ProtectedRoute>

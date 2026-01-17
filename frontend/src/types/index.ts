@@ -54,3 +54,13 @@ export interface SessionsResponse {
     totalPages: number;
   };
 }
+
+export interface Label {
+  id: string;
+  color: string;
+  name: string;
+}
+
+export interface LabelsResponse {
+  labels: Label[];
+}

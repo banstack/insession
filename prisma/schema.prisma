@@ -19,6 +19,7 @@ model User {
 
   // Relations
   sessions  Session[]
+  labels    Label[]
 
   @@map("users")
 }
@@ -72,4 +73,20 @@ enum SessionStatus {
   COMPLETED
 
   @@map("session_status")
+}
+
+// Label Model
+model Label {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  color     String   @db.VarChar(7)
+  name      String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, color])
+  @@index([userId])
+  @@map("labels")
 }

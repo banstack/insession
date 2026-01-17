@@ -1,7 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { sessionsApi } from '../../services/api';
-import type { Session } from '../../types';
+import type { Session, Activity } from '../../types';
+
+const ActivityBar = ({ activities, totalMinutes }: { activities: Activity[], totalMinutes: number }) => (
+  <div className="flex h-4 rounded-lg overflow-hidden bg-gray-100">
+    {activities.map((activity) => {
+      const percentage = (activity.durationMinutes / totalMinutes) * 100;
+      return (
+        <div
+          key={activity.id}
+          className="h-full flex items-center justify-center overflow-hidden"
+          style={{
+            width: `${percentage}%`,
+            backgroundColor: activity.color,
+          }}
+          title={`${activity.name}: ${activity.durationMinutes} min`}
+        >
+          <span className="text-xs font-medium text-white truncate px-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+            {percentage >= 15 ? `${activity.durationMinutes}m` : ''}
+          </span>
+        </div>
+      );
+    })}
+  </div>
+);
 
 export default function SessionList() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -138,6 +161,14 @@ export default function SessionList() {
               <span className="text-gray-400">
                 {formatDate(session.createdAt)}
               </span>
+            </div>
+
+            {/* Activity breakdown bar */}
+            <div className="mt-3 w-1/2">
+              <ActivityBar
+                activities={session.activities}
+                totalMinutes={getTotalMinutes(session)}
+              />
             </div>
           </Link>
 

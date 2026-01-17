@@ -1,4 +1,4 @@
-import type { User, Session, CreateActivityInput, SessionsResponse, ActivityProgress } from '../types';
+import type { User, Session, CreateActivityInput, SessionsResponse, ActivityProgress, Label, LabelsResponse } from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -72,6 +72,22 @@ export const sessionsApi = {
 
   delete: (id: string) =>
     request<void>(`/sessions/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Labels API
+export const labelsApi = {
+  list: () => request<LabelsResponse>('/labels'),
+
+  upsert: (color: string, name: string) =>
+    request<Label>('/labels', {
+      method: 'PUT',
+      body: JSON.stringify({ color, name }),
+    }),
+
+  delete: (color: string) =>
+    request<void>(`/labels/${encodeURIComponent(color)}`, {
       method: 'DELETE',
     }),
 };

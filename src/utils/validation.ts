@@ -60,3 +60,9 @@ export const updateActivitiesSchema = z.object({
     )
     .min(1),
 });
+
+// Label schemas
+export const upsertLabelSchema = z.object({
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color'),
+  name: z.string().min(1, 'Name is required').max(50, 'Name must be at most 50 characters'),
+});

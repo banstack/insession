@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sessionsApi } from '../../services/api';
-import type { CreateActivityInput } from '../../types';
+import { sessionsApi, labelsApi } from '../../services/api';
+import type { CreateActivityInput, Label } from '../../types';
 import ActivityCard from './ActivityCard';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -13,7 +13,14 @@ export default function CreateSession() {
   const [color, setColor] = useState(COLORS[0]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [labels, setLabels] = useState<Label[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    labelsApi.list().then(response => setLabels(response.labels)).catch(() => {});
+  }, []);
+
+  const getLabelForColor = (c: string) => labels.find(l => l.color === c);
 
   const addActivity = () => {
     if (!name.trim()) {
@@ -100,22 +107,32 @@ export default function CreateSession() {
               />
             </div>
 
-            <div>
+            <div className="md:col-span-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Color
               </label>
-              <div className="flex gap-2">
-                {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      color === c ? 'border-gray-900 scale-110' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
+              <div className="flex gap-3 flex-wrap">
+                {COLORS.map((c) => {
+                  const label = getLabelForColor(c);
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                        color === c ? 'bg-gray-100 ring-2 ring-gray-900' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: c }}
+                      />
+                      <span className="text-xs text-gray-600 max-w-[60px] truncate">
+                        {label?.name || c}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
