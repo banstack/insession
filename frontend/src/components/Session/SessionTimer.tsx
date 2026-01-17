@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { sessionsApi } from '../../services/api';
-import type { Session, ActivityProgress } from '../../types';
+import { sessionsApi, labelsApi } from '../../services/api';
+import type { Session, ActivityProgress, CreateActivityInput, Label } from '../../types';
 import ActivityCard from './ActivityCard';
+
+const PRESET_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
+];
 
 export default function SessionTimer() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +20,22 @@ export default function SessionTimer() {
   // Track per-activity elapsed time locally
   const [activityElapsed, setActivityElapsed] = useState<Record<string, number>>({});
   const lastActivityIndexRef = useRef<number>(0);
+
+  // Add activities form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [pendingActivities, setPendingActivities] = useState<CreateActivityInput[]>([]);
+  const [newActivityName, setNewActivityName] = useState('');
+  const [newActivityDuration, setNewActivityDuration] = useState(25);
+  const [newActivityColor, setNewActivityColor] = useState(PRESET_COLORS[0]);
+  const [addError, setAddError] = useState('');
+  const [labels, setLabels] = useState<Label[]>([]);
+
+  // Fetch labels for color picker
+  useEffect(() => {
+    labelsApi.list().then(response => setLabels(response.labels)).catch(() => {});
+  }, []);
+
+  const getLabelForColor = (c: string) => labels.find(l => l.color === c);
 
   // Load session
   useEffect(() => {
@@ -176,6 +196,77 @@ export default function SessionTimer() {
     }
   };
 
+  const handleAddPendingActivity = () => {
+    if (!newActivityName.trim()) {
+      setAddError('Activity name is required');
+      return;
+    }
+
+    // Check for duplicate names in pending activities
+    const lowerName = newActivityName.trim().toLowerCase();
+    const existsInPending = pendingActivities.some(
+      a => a.name.trim().toLowerCase() === lowerName
+    );
+    const existsInSession = session?.activities.some(
+      a => a.name.trim().toLowerCase() === lowerName
+    );
+
+    if (existsInPending || existsInSession) {
+      setAddError('Activity name must be unique');
+      return;
+    }
+
+    setPendingActivities([
+      ...pendingActivities,
+      {
+        name: newActivityName.trim(),
+        durationMinutes: newActivityDuration,
+        color: newActivityColor,
+      },
+    ]);
+    setNewActivityName('');
+    setNewActivityDuration(25);
+    setNewActivityColor(PRESET_COLORS[(pendingActivities.length + 1) % PRESET_COLORS.length]);
+    setAddError('');
+  };
+
+  const handleRemovePendingActivity = (index: number) => {
+    setPendingActivities(pendingActivities.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitActivities = async () => {
+    if (!session || !id || pendingActivities.length === 0) return;
+
+    try {
+      const updatedSession = await sessionsApi.addActivities(id, pendingActivities);
+      setSession(updatedSession);
+
+      // Initialize elapsed times for new activities
+      const newElapsed = { ...activityElapsed };
+      updatedSession.activities.forEach(a => {
+        if (!(a.id in newElapsed)) {
+          newElapsed[a.id] = a.elapsedSeconds || 0;
+        }
+      });
+      setActivityElapsed(newElapsed);
+
+      // Reset form
+      setPendingActivities([]);
+      setShowAddForm(false);
+      setAddError('');
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add activities');
+    }
+  };
+
+  // Determine if session allows adding activities
+  const canAddActivities = () => {
+    if (!session) return false;
+    const allDone = session.activities.every(a => a.completed);
+    // Allow if not COMPLETED, or if COMPLETED but not all activities done (INCOMPLETE)
+    return session.status !== 'COMPLETED' || !allDone;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -287,6 +378,132 @@ export default function SessionTimer() {
           );
         })}
       </div>
+
+      {/* Add Activities Section */}
+      {canAddActivities() && (
+        <div className="mt-6 border-t pt-6">
+          {!showAddForm ? (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+            >
+              + Add Activities
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900">Add Activities</h3>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setPendingActivities([]);
+                    setAddError('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {addError && (
+                <div className="text-red-500 text-sm">{addError}</div>
+              )}
+
+              {/* New Activity Form */}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="block text-sm text-gray-600 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={newActivityName}
+                    onChange={(e) => setNewActivityName(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Activity name"
+                  />
+                </div>
+                <div className="w-24">
+                  <label className="block text-sm text-gray-600 mb-1">Minutes</label>
+                  <input
+                    type="number"
+                    value={newActivityDuration}
+                    onChange={(e) => setNewActivityDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                    min="1"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <button
+                  onClick={handleAddPendingActivity}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+
+              {/* Color/Label Picker */}
+              <div>
+                <label className="block text-sm text-gray-600 mb-2">Color</label>
+                <div className="flex gap-3 flex-wrap">
+                  {PRESET_COLORS.map((c) => {
+                    const label = getLabelForColor(c);
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewActivityColor(c)}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
+                          newActivityColor === c ? 'bg-gray-100 ring-2 ring-gray-900' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-full"
+                          style={{ backgroundColor: c }}
+                        />
+                        <span className="text-xs text-gray-600 max-w-[60px] truncate">
+                          {label?.name || c}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Pending Activities List */}
+              {pendingActivities.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700">Activities to add:</h4>
+                  {pendingActivities.map((activity, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: activity.color }}
+                        />
+                        <span className="font-medium">{activity.name}</span>
+                        <span className="text-gray-500">{activity.durationMinutes} min</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemovePendingActivity(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={handleSubmitActivities}
+                    className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    Add {pendingActivities.length} {pendingActivities.length === 1 ? 'Activity' : 'Activities'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

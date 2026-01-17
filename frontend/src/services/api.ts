@@ -74,6 +74,12 @@ export const sessionsApi = {
     request<void>(`/sessions/${id}`, {
       method: 'DELETE',
     }),
+
+  addActivities: (id: string, activities: CreateActivityInput[]) =>
+    request<Session>(`/sessions/${id}/activities`, {
+      method: 'POST',
+      body: JSON.stringify({ activities }),
+    }),
 };
 
 // Labels API

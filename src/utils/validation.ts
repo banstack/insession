@@ -61,6 +61,18 @@ export const updateActivitiesSchema = z.object({
     .min(1),
 });
 
+export const addActivitiesSchema = z.object({
+  activities: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(255),
+        durationMinutes: z.number().int().min(1),
+        color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      })
+    )
+    .min(1),
+});
+
 // Label schemas
 export const upsertLabelSchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color'),

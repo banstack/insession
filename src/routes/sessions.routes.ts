@@ -6,6 +6,7 @@ import {
   createSessionSchema,
   updateSessionSchema,
   updateActivitiesSchema,
+  addActivitiesSchema,
 } from '../utils/validation.js';
 
 const router = Router();
@@ -28,6 +29,10 @@ router.patch('/:id', validateRequest(updateSessionSchema), (req, res) =>
 
 router.patch('/:id/activities', validateRequest(updateActivitiesSchema), (req, res) =>
   sessionController.updateActivities(req, res)
+);
+
+router.post('/:id/activities', validateRequest(addActivitiesSchema), (req, res) =>
+  sessionController.addActivities(req, res)
 );
 
 router.delete('/:id', (req, res) => sessionController.deleteSession(req, res));

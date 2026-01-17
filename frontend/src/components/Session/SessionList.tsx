@@ -13,11 +13,17 @@ const ActivityBar = ({ activities, totalMinutes }: { activities: Activity[], tot
           className="h-full flex items-center justify-center overflow-hidden"
           style={{
             width: `${percentage}%`,
-            backgroundColor: activity.color,
+            backgroundColor: activity.completed ? activity.color : '#d1d5db',
           }}
-          title={`${activity.name}: ${activity.durationMinutes} min`}
+          title={`${activity.name}: ${activity.durationMinutes} min${activity.completed ? '' : ' (incomplete)'}`}
         >
-          <span className="text-xs font-medium text-white truncate px-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+          <span
+            className="text-xs font-medium truncate px-1"
+            style={{
+              color: activity.completed ? 'white' : '#6b7280',
+              textShadow: activity.completed ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+            }}
+          >
             {percentage >= 15 ? `${activity.durationMinutes}m` : ''}
           </span>
         </div>

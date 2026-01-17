@@ -82,4 +82,19 @@ export class SessionController {
       res.status(404).json({ error: message });
     }
   }
+
+  async addActivities(req: AuthRequest, res: Response) {
+    try {
+      const sessionId = req.params.id as string;
+      const session = await sessionService.addActivities(
+        sessionId,
+        req.user!.userId,
+        req.body
+      );
+      res.status(200).json(session);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to add activities';
+      res.status(400).json({ error: message });
+    }
+  }
 }

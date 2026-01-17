@@ -34,6 +34,14 @@ export interface UpdateActivitiesInput {
   }>;
 }
 
+export interface AddActivitiesInput {
+  activities: Array<{
+    name: string;
+    durationMinutes: number;
+    color: string;
+  }>;
+}
+
 export class SessionService {
   async createSession(data: CreateSessionInput) {
     // Validate unique activity names (case-insensitive)
@@ -213,5 +221,78 @@ export class SessionService {
     await prisma.session.delete({
       where: { id: sessionId },
     });
+  }
+
+  async addActivities(sessionId: string, userId: string, data: AddActivitiesInput) {
+    // Verify ownership and get current session
+    const session = await this.getSession(sessionId, userId);
+
+    // Check if session allows adding activities
+    const allActivitiesDone = session.activities.every(a => a.completed);
+
+    if (session.status === SessionStatus.COMPLETED && allActivitiesDone) {
+      throw new Error('Cannot add activities to a fully completed session');
+    }
+
+    // Validate new activity names are unique (case-insensitive)
+    const newNames = data.activities.map(a => a.name.trim().toLowerCase());
+    const uniqueNewNames = new Set(newNames);
+    if (newNames.length !== uniqueNewNames.size) {
+      throw new Error('Activity names must be unique');
+    }
+
+    // Check for conflicts with existing activity names
+    const existingNames = new Set(session.activities.map(a => a.name.trim().toLowerCase()));
+    for (const name of newNames) {
+      if (existingNames.has(name)) {
+        throw new Error('Activity names must be unique');
+      }
+    }
+
+    // Get max orderIndex from existing activities
+    const maxOrderIndex = session.activities.reduce((max, a) => Math.max(max, a.orderIndex), -1);
+
+    // Determine if session was INCOMPLETE (COMPLETED but not all activities done)
+    const wasIncomplete = session.status === SessionStatus.COMPLETED && !allActivitiesDone;
+
+    // Create new activities and update session status if needed
+    const updated = await prisma.$transaction(async (tx) => {
+      // Create new activities
+      await tx.activity.createMany({
+        data: data.activities.map((activity, index) => ({
+          sessionId,
+          name: activity.name.trim(),
+          durationMinutes: activity.durationMinutes,
+          durationSeconds: activity.durationMinutes * 60,
+          color: activity.color,
+          completed: false,
+          elapsedSeconds: 0,
+          orderIndex: maxOrderIndex + 1 + index,
+        })),
+      });
+
+      // If session was INCOMPLETE, reset to PAUSED and clear completedAt
+      if (wasIncomplete) {
+        await tx.session.update({
+          where: { id: sessionId },
+          data: {
+            status: SessionStatus.PAUSED,
+            completedAt: null,
+          },
+        });
+      }
+
+      // Return updated session
+      return tx.session.findUnique({
+        where: { id: sessionId },
+        include: {
+          activities: {
+            orderBy: { orderIndex: 'asc' },
+          },
+        },
+      });
+    });
+
+    return updated;
   }
 }
