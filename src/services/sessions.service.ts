@@ -116,10 +116,18 @@ export class SessionService {
 
   async updateSession(sessionId: string, userId: string, data: UpdateSessionInput) {
     // Verify ownership
-    await this.getSession(sessionId, userId);
+    const currentSession = await this.getSession(sessionId, userId);
 
     // Extract activity progress for separate update
     const { activityProgress, ...sessionData } = data;
+
+    // Handle completedAt timestamp based on status change
+    const updateData: typeof sessionData & { completedAt?: Date | null } = { ...sessionData };
+    if (data.status === SessionStatus.COMPLETED && currentSession.status !== SessionStatus.COMPLETED) {
+      updateData.completedAt = new Date();
+    } else if (data.status && data.status !== SessionStatus.COMPLETED && currentSession.status === SessionStatus.COMPLETED) {
+      updateData.completedAt = null;
+    }
 
     // Update session and activities in a transaction
     const updated = await prisma.$transaction(async (tx) => {
@@ -139,7 +147,7 @@ export class SessionService {
       // Update session
       return tx.session.update({
         where: { id: sessionId },
-        data: sessionData,
+        data: updateData,
         include: {
           activities: {
             orderBy: { orderIndex: 'asc' },

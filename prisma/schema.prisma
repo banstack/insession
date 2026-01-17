@@ -31,6 +31,7 @@ model Session {
   currentActivityIndex Int           @default(0) @map("current_activity_index")
   elapsedSeconds       Int           @default(0) @map("elapsed_seconds")
   status               SessionStatus @default(NOT_STARTED)
+  completedAt          DateTime?     @map("completed_at")
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
 

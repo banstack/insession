@@ -23,6 +23,7 @@ export interface Session {
   currentActivityIndex: number;
   elapsedSeconds: number;
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED';
+  completedAt: string | null;
   createdAt: string;
   updatedAt: string;
   activities: Activity[];

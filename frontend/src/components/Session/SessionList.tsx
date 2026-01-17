@@ -48,10 +48,20 @@ export default function SessionList() {
     return session.activities.reduce((sum, a) => sum + a.durationMinutes, 0);
   };
 
+  const getDisplayStatus = (session: Session) => {
+    if (session.status === 'COMPLETED') {
+      const allActivitiesCompleted = session.activities.every(a => a.completed);
+      return allActivitiesCompleted ? 'COMPLETED' : 'INCOMPLETE';
+    }
+    return session.status;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED':
         return 'bg-green-100 text-green-700';
+      case 'INCOMPLETE':
+        return 'bg-orange-100 text-orange-700';
       case 'IN_PROGRESS':
         return 'bg-blue-100 text-blue-700';
       case 'PAUSED':
@@ -116,8 +126,8 @@ export default function SessionList() {
                   </span>
                 )}
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(session.status)}`}>
-                {session.status.replace('_', ' ')}
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(getDisplayStatus(session))}`}>
+                {getDisplayStatus(session).replace('_', ' ')}
               </span>
             </div>
 
