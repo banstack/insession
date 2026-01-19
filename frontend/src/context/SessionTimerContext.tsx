@@ -150,10 +150,25 @@ export function SessionTimerProvider({ children }: { children: ReactNode }) {
     // If already loaded this session, don't reload
     if (sessionId === id && session) return;
 
+    // If we have an active session and are trying to load a different session,
+    // don't replace it - let the component handle viewing other sessions locally
+    const hasActiveSession = session && session.status !== 'COMPLETED';
+    if (hasActiveSession && sessionId !== id) {
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
       const data = await sessionsApi.get(id);
+
+      // Only load into context if it's not a completed session
+      // (completed sessions should be viewed locally in the component)
+      if (data.status === 'COMPLETED') {
+        setLoading(false);
+        return;
+      }
+
       setSession(data);
       setSessionId(id);
       setElapsedSeconds(data.elapsedSeconds);

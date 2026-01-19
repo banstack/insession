@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { sessionsApi, labelsApi } from '../../services/api';
 import { useSessionTimer } from '../../context/SessionTimerContext';
-import type { CreateActivityInput, Label } from '../../types';
+import type { Session, CreateActivityInput, Label } from '../../types';
 import ActivityCard from './ActivityCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,22 +21,74 @@ export default function SessionTimer() {
 
   // Get timer state from context
   const {
-    session,
-    loading,
-    error,
-    isRunning,
-    elapsedSeconds,
-    activityElapsed,
-    currentActivity,
-    remainingSeconds,
-    progress,
-    isComplete,
+    session: contextSession,
+    sessionId: contextSessionId,
+    loading: contextLoading,
+    error: contextError,
+    isRunning: contextIsRunning,
+    elapsedSeconds: contextElapsedSeconds,
+    activityElapsed: contextActivityElapsed,
     loadSession,
     toggleTimer,
     completeSession,
     setSession,
     setActivityElapsed,
   } = useSessionTimer();
+
+  // Local state for viewing sessions not in context (completed or different sessions)
+  const [localSession, setLocalSession] = useState<Session | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  // Determine if we're viewing the context session or a local one
+  const isViewingContextSession = contextSessionId === id && contextSession;
+
+  // Use context data if viewing the active session, otherwise use local data
+  const session = isViewingContextSession ? contextSession : localSession;
+  const loading = isViewingContextSession ? contextLoading : localLoading;
+  const error = isViewingContextSession ? contextError : localError;
+
+  // For non-context sessions, compute these locally
+  const elapsedSeconds = isViewingContextSession ? contextElapsedSeconds : (localSession?.elapsedSeconds || 0);
+  const activityElapsed = isViewingContextSession ? contextActivityElapsed : (() => {
+    const elapsed: Record<string, number> = {};
+    localSession?.activities.forEach(a => {
+      elapsed[a.id] = a.elapsedSeconds || 0;
+    });
+    return elapsed;
+  })();
+  const isRunning = isViewingContextSession ? contextIsRunning : false;
+
+  // Compute derived values based on the current session
+  const totalSeconds = session ? session.activities.reduce((sum, a) => sum + a.durationSeconds, 0) : 0;
+
+  const currentActivityIndex = session ? (() => {
+    let accumulated = 0;
+    for (let i = 0; i < session.activities.length; i++) {
+      accumulated += session.activities[i].durationSeconds;
+      if (elapsedSeconds < accumulated) {
+        return i;
+      }
+    }
+    return session.activities.length - 1;
+  })() : 0;
+
+  const currentActivity = session?.activities[currentActivityIndex] || null;
+
+  const remainingSeconds = session ? (() => {
+    let accumulated = 0;
+    for (let i = 0; i < session.activities.length; i++) {
+      const activityEnd = accumulated + session.activities[i].durationSeconds;
+      if (elapsedSeconds < activityEnd) {
+        return activityEnd - elapsedSeconds;
+      }
+      accumulated = activityEnd;
+    }
+    return 0;
+  })() : 0;
+
+  const progress = totalSeconds > 0 ? (elapsedSeconds / totalSeconds) * 100 : 0;
+  const isComplete = session?.status === 'COMPLETED' || (totalSeconds > 0 && elapsedSeconds >= totalSeconds);
 
   // Local UI state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -55,28 +107,30 @@ export default function SessionTimer() {
 
   // Load session on mount
   useEffect(() => {
-    if (id) {
-      loadSession(id);
-    }
-  }, [id, loadSession]);
+    if (!id) return;
 
-  const getCurrentActivityIndex = useCallback(() => {
-    if (!session) return 0;
+    // First try to load into context (will work for active sessions)
+    loadSession(id);
 
-    let accumulated = 0;
-    for (let i = 0; i < session.activities.length; i++) {
-      accumulated += session.activities[i].durationSeconds;
-      if (elapsedSeconds < accumulated) {
-        return i;
+    // Also fetch locally for viewing (handles completed sessions and different sessions)
+    const fetchLocalSession = async () => {
+      // If context already has this session, don't fetch locally
+      if (contextSessionId === id && contextSession) return;
+
+      setLocalLoading(true);
+      setLocalError('');
+      try {
+        const data = await sessionsApi.get(id);
+        setLocalSession(data);
+      } catch (err) {
+        setLocalError(err instanceof Error ? err.message : 'Failed to load session');
+      } finally {
+        setLocalLoading(false);
       }
-    }
-    return session.activities.length - 1;
-  }, [session, elapsedSeconds]);
+    };
 
-  const getTotalSeconds = useCallback(() => {
-    if (!session) return 0;
-    return session.activities.reduce((sum, a) => sum + a.durationSeconds, 0);
-  }, [session]);
+    fetchLocalSession();
+  }, [id, loadSession, contextSessionId, contextSession]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -182,9 +236,6 @@ export default function SessionTimer() {
     );
   }
 
-  const currentIndex = getCurrentActivityIndex();
-  const totalSeconds = getTotalSeconds();
-
   return (
     <div className="max-w-2xl mx-auto p-6">
       {/* Progress Bar */}
@@ -211,7 +262,7 @@ export default function SessionTimer() {
         <p className="text-muted-foreground">
           {isComplete
             ? 'Great work!'
-            : `Activity ${currentIndex + 1} of ${session.activities.length}`}
+            : `Activity ${currentActivityIndex + 1} of ${session.activities.length}`}
         </p>
       </div>
 
@@ -261,7 +312,7 @@ export default function SessionTimer() {
             accumulatedBefore += session.activities[i].durationSeconds;
           }
           const isCompleted = elapsedSeconds >= accumulatedBefore + activity.durationSeconds;
-          const isActive = index === currentIndex && !isComplete;
+          const isActive = index === currentActivityIndex && !isComplete;
           const actualElapsed = activityElapsed[activity.id] || activity.elapsedSeconds || 0;
 
           return (
