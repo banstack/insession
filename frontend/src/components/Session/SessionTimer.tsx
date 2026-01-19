@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { sessionsApi, labelsApi } from '../../services/api';
-import type { Session, ActivityProgress, CreateActivityInput, Label } from '../../types';
+import { useSessionTimer } from '../../context/SessionTimerContext';
+import type { CreateActivityInput, Label } from '../../types';
 import ActivityCard from './ActivityCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,14 +18,27 @@ const PRESET_COLORS = [
 export default function SessionTimer() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const [activityElapsed, setActivityElapsed] = useState<Record<string, number>>({});
+  // Get timer state from context
+  const {
+    session,
+    loading,
+    error,
+    isRunning,
+    elapsedSeconds,
+    activityElapsed,
+    currentActivity,
+    remainingSeconds,
+    progress,
+    isComplete,
+    loadSession,
+    toggleTimer,
+    completeSession,
+    setSession,
+    setActivityElapsed,
+  } = useSessionTimer();
 
+  // Local UI state
   const [showAddForm, setShowAddForm] = useState(false);
   const [pendingActivities, setPendingActivities] = useState<CreateActivityInput[]>([]);
   const [newActivityName, setNewActivityName] = useState('');
@@ -39,24 +53,12 @@ export default function SessionTimer() {
 
   const getLabelForColor = (c: string) => labels.find(l => l.color === c);
 
+  // Load session on mount
   useEffect(() => {
-    if (!id) return;
-
-    sessionsApi.get(id)
-      .then((data) => {
-        setSession(data);
-        setElapsedSeconds(data.elapsedSeconds);
-        setIsRunning(data.status === 'IN_PROGRESS');
-
-        const elapsed: Record<string, number> = {};
-        data.activities.forEach(a => {
-          elapsed[a.id] = a.elapsedSeconds || 0;
-        });
-        setActivityElapsed(elapsed);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+    if (id) {
+      loadSession(id);
+    }
+  }, [id, loadSession]);
 
   const getCurrentActivityIndex = useCallback(() => {
     if (!session) return 0;
@@ -71,87 +73,10 @@ export default function SessionTimer() {
     return session.activities.length - 1;
   }, [session, elapsedSeconds]);
 
-  useEffect(() => {
-    if (!isRunning || !session) return;
-
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => {
-        const newElapsed = prev + 1;
-
-        const currentIndex = getCurrentActivityIndex();
-        const currentActivity = session.activities[currentIndex];
-
-        if (currentActivity) {
-          setActivityElapsed(prev => ({
-            ...prev,
-            [currentActivity.id]: (prev[currentActivity.id] || 0) + 1
-          }));
-        }
-
-        return newElapsed;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isRunning, session, getCurrentActivityIndex]);
-
-  const getActivityProgress = useCallback((): ActivityProgress[] => {
-    if (!session) return [];
-
-    return session.activities.map((activity, index) => {
-      let accumulatedBefore = 0;
-      for (let i = 0; i < index; i++) {
-        accumulatedBefore += session.activities[i].durationSeconds;
-      }
-      const isCompleted = elapsedSeconds >= accumulatedBefore + activity.durationSeconds;
-
-      return {
-        id: activity.id,
-        elapsedSeconds: activityElapsed[activity.id] || 0,
-        completed: isCompleted,
-      };
-    });
-  }, [session, elapsedSeconds, activityElapsed]);
-
-  useEffect(() => {
-    if (!session || !id) return;
-
-    const saveInterval = setInterval(() => {
-      if (isRunning) {
-        const currentActivityIndex = getCurrentActivityIndex();
-        sessionsApi.update(id, {
-          elapsedSeconds,
-          currentActivityIndex,
-          status: 'IN_PROGRESS',
-          activityProgress: getActivityProgress(),
-        }).catch(console.error);
-      }
-    }, 10000);
-
-    return () => clearInterval(saveInterval);
-  }, [session, id, isRunning, elapsedSeconds, getCurrentActivityIndex, getActivityProgress]);
-
   const getTotalSeconds = useCallback(() => {
     if (!session) return 0;
     return session.activities.reduce((sum, a) => sum + a.durationSeconds, 0);
   }, [session]);
-
-  const getCurrentActivityTime = useCallback(() => {
-    if (!session) return { remaining: 0, elapsed: 0 };
-
-    let accumulated = 0;
-    for (let i = 0; i < session.activities.length; i++) {
-      const activityEnd = accumulated + session.activities[i].durationSeconds;
-      if (elapsedSeconds < activityEnd) {
-        return {
-          elapsed: elapsedSeconds - accumulated,
-          remaining: activityEnd - elapsedSeconds,
-        };
-      }
-      accumulated = activityEnd;
-    }
-    return { elapsed: 0, remaining: 0 };
-  }, [session, elapsedSeconds]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -160,35 +85,15 @@ export default function SessionTimer() {
   };
 
   const handlePlayPause = async () => {
-    if (!session || !id) return;
-
-    const newStatus = isRunning ? 'PAUSED' : 'IN_PROGRESS';
-    setIsRunning(!isRunning);
-
-    try {
-      await sessionsApi.update(id, {
-        status: newStatus,
-        elapsedSeconds,
-        currentActivityIndex: getCurrentActivityIndex(),
-        activityProgress: getActivityProgress(),
-      });
-    } catch (err) {
-      console.error('Failed to update session:', err);
-    }
+    await toggleTimer();
   };
 
   const handleComplete = async () => {
-    if (!session || !id) return;
-
     try {
-      await sessionsApi.update(id, {
-        status: 'COMPLETED',
-        elapsedSeconds,
-        activityProgress: getActivityProgress(),
-      });
+      await completeSession();
       navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete session');
+    } catch {
+      // Error is set in context
     }
   };
 
@@ -278,11 +183,7 @@ export default function SessionTimer() {
   }
 
   const currentIndex = getCurrentActivityIndex();
-  const currentActivity = session.activities[currentIndex];
-  const { remaining } = getCurrentActivityTime();
   const totalSeconds = getTotalSeconds();
-  const progress = (elapsedSeconds / totalSeconds) * 100;
-  const isComplete = elapsedSeconds >= totalSeconds;
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -305,7 +206,7 @@ export default function SessionTimer() {
           {isComplete ? 'Session Complete!' : currentActivity?.name}
         </h1>
         <div className="text-7xl font-mono font-bold text-foreground mb-4 tracking-tight">
-          {isComplete ? '00:00' : formatTime(remaining)}
+          {isComplete ? '00:00' : formatTime(remainingSeconds)}
         </div>
         <p className="text-muted-foreground">
           {isComplete

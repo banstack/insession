@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SessionTimerProvider } from './context/SessionTimerContext';
 import ProtectedRoute from './components/Layout/ProtectedRoute';
 import Navbar from './components/Layout/Navbar';
 import LoginForm from './components/Auth/LoginForm';
@@ -8,6 +9,7 @@ import RegisterForm from './components/Auth/RegisterForm';
 import CreateSession from './components/Session/CreateSession';
 import SessionList from './components/Session/SessionList';
 import SessionTimer from './components/Session/SessionTimer';
+import MiniPlayer from './components/Session/MiniPlayer';
 import LabelsManager from './components/Labels/LabelsManager';
 import { useAuth } from './context/AuthContext';
 
@@ -95,7 +97,10 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <SessionTimerProvider>
+            <AppRoutes />
+            <MiniPlayer />
+          </SessionTimerProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
