@@ -4,9 +4,15 @@ import type { Label } from '../../types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Pencil, Trash2, Check, X, History } from 'lucide-react';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+interface BackfillPrompt {
+  color: string;
+  labelName: string;
+  count: number;
+}
 
 export default function LabelsManager() {
   const [labels, setLabels] = useState<Label[]>([]);
@@ -15,6 +21,8 @@ export default function LabelsManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [backfillPrompt, setBackfillPrompt] = useState<BackfillPrompt | null>(null);
+  const [backfilling, setBackfilling] = useState(false);
 
   useEffect(() => {
     loadLabels();
@@ -66,6 +74,16 @@ export default function LabelsManager() {
         }
         return [...prev, savedLabel];
       });
+
+      // Check if there are unlinked activities to backfill
+      if (savedLabel.unlinkedCount && savedLabel.unlinkedCount > 0) {
+        setBackfillPrompt({
+          color: editingColor,
+          labelName: editingName.trim(),
+          count: savedLabel.unlinkedCount,
+        });
+      }
+
       setEditingColor(null);
       setEditingName('');
       setError('');
@@ -74,6 +92,25 @@ export default function LabelsManager() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleBackfill = async () => {
+    if (!backfillPrompt) return;
+
+    setBackfilling(true);
+    try {
+      await labelsApi.backfill(backfillPrompt.color);
+      setBackfillPrompt(null);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to backfill activities');
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
+  const handleSkipBackfill = () => {
+    setBackfillPrompt(null);
   };
 
   const handleDelete = async (color: string) => {
@@ -112,6 +149,43 @@ export default function LabelsManager() {
         <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm mb-4 border border-destructive/20">
           {error}
         </div>
+      )}
+
+      {/* Backfill Prompt */}
+      {backfillPrompt && (
+        <Card className="p-4 mb-4 border-primary/50 bg-primary/5">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <History className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-foreground mb-1">
+                Link historical activities?
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Found {backfillPrompt.count} historical {backfillPrompt.count === 1 ? 'activity' : 'activities'} with this color that {backfillPrompt.count === 1 ? "isn't" : "aren't"} linked to "{backfillPrompt.labelName}".
+                Would you like to link {backfillPrompt.count === 1 ? 'it' : 'them'} now?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleBackfill}
+                  disabled={backfilling}
+                  size="sm"
+                >
+                  {backfilling ? 'Linking...' : `Link ${backfillPrompt.count} ${backfillPrompt.count === 1 ? 'Activity' : 'Activities'}`}
+                </Button>
+                <Button
+                  onClick={handleSkipBackfill}
+                  disabled={backfilling}
+                  variant="ghost"
+                  size="sm"
+                >
+                  Skip
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
       )}
 
       <Card className="divide-y divide-border">

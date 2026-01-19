@@ -96,4 +96,12 @@ export const labelsApi = {
     request<void>(`/labels/${encodeURIComponent(color)}`, {
       method: 'DELETE',
     }),
+
+  getUnlinkedCount: (color: string) =>
+    request<{ count: number }>(`/labels/${encodeURIComponent(color)}/unlinked-count`),
+
+  backfill: (color: string) =>
+    request<{ updatedCount: number }>(`/labels/${encodeURIComponent(color)}/backfill`, {
+      method: 'POST',
+    }),
 };

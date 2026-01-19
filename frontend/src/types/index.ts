@@ -14,6 +14,7 @@ export interface Activity {
   elapsedSeconds: number;
   completed: boolean;
   color: string;
+  labelId: string | null;
   orderIndex: number;
 }
 
@@ -59,6 +60,7 @@ export interface Label {
   id: string;
   color: string;
   name: string;
+  unlinkedCount?: number;
 }
 
 export interface LabelsResponse {

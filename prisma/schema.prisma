@@ -6,6 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // User Model
@@ -54,14 +55,17 @@ model Activity {
   elapsedSeconds  Int      @default(0) @map("elapsed_seconds")
   completed       Boolean  @default(false)
   color           String   @db.VarChar(7)
+  labelId         String?  @map("label_id")
   orderIndex      Int      @map("order_index")
   createdAt       DateTime @default(now()) @map("created_at")
 
   // Relations
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  label   Label?  @relation(fields: [labelId], references: [id], onDelete: SetNull)
 
   @@index([sessionId])
   @@index([sessionId, orderIndex])
+  @@index([labelId])
   @@map("activities")
 }
 
@@ -84,7 +88,9 @@ model Label {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities Activity[]
 
   @@unique([userId, color])
   @@index([userId])

@@ -52,6 +52,12 @@ export class SessionService {
       throw new Error('Activity names must be unique');
     }
 
+    // Get user's labels to auto-link by color
+    const userLabels = await prisma.label.findMany({
+      where: { userId: data.userId },
+    });
+    const colorToLabelId = new Map(userLabels.map(l => [l.color, l.id]));
+
     // Create session with activities
     const session = await prisma.session.create({
       data: {
@@ -62,6 +68,7 @@ export class SessionService {
             durationMinutes: activity.durationMinutes,
             durationSeconds: activity.durationMinutes * 60,
             color: activity.color,
+            labelId: colorToLabelId.get(activity.color) || null,
             orderIndex: index,
           })),
         },
@@ -179,6 +186,12 @@ export class SessionService {
       throw new Error('Activity names must be unique');
     }
 
+    // Get user's labels to auto-link by color
+    const userLabels = await prisma.label.findMany({
+      where: { userId },
+    });
+    const colorToLabelId = new Map(userLabels.map(l => [l.color, l.id]));
+
     // Delete all existing activities and create new ones (simplest approach)
     const updated = await prisma.$transaction(async (tx) => {
       // Delete existing activities
@@ -194,6 +207,7 @@ export class SessionService {
           durationMinutes: activity.durationMinutes,
           durationSeconds: activity.durationMinutes * 60,
           color: activity.color,
+          labelId: colorToLabelId.get(activity.color) || null,
           completed: activity.completed ?? false,
           elapsedSeconds: activity.elapsedSeconds ?? 0,
           orderIndex: index,
@@ -255,6 +269,12 @@ export class SessionService {
     // Determine if session was INCOMPLETE (COMPLETED but not all activities done)
     const wasIncomplete = session.status === SessionStatus.COMPLETED && !allActivitiesDone;
 
+    // Get user's labels to auto-link by color
+    const userLabels = await prisma.label.findMany({
+      where: { userId },
+    });
+    const colorToLabelId = new Map(userLabels.map(l => [l.color, l.id]));
+
     // Create new activities and update session status if needed
     const updated = await prisma.$transaction(async (tx) => {
       // Create new activities
@@ -265,6 +285,7 @@ export class SessionService {
           durationMinutes: activity.durationMinutes,
           durationSeconds: activity.durationMinutes * 60,
           color: activity.color,
+          labelId: colorToLabelId.get(activity.color) || null,
           completed: false,
           elapsedSeconds: 0,
           orderIndex: maxOrderIndex + 1 + index,
