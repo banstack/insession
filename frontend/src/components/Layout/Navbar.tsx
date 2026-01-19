@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Plus, Tag, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -13,37 +15,39 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="border-b border-border bg-background">
       <div className="max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold text-blue-600">
+          <Link to="/" className="text-xl font-bold text-foreground tracking-tight">
             InSession
           </Link>
 
           {user && (
-            <div className="flex items-center gap-4">
-              <Link
-                to="/new"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                New Session
-              </Link>
+            <div className="flex items-center gap-3">
+              <Button asChild size="sm">
+                <Link to="/new">
+                  <Plus className="h-4 w-4" />
+                  New Session
+                </Link>
+              </Button>
 
-              <Link
-                to="/labels"
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Labels
-              </Link>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/labels">
+                  <Tag className="h-4 w-4" />
+                  Labels
+                </Link>
+              </Button>
 
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">{user.username}</span>
-                <button
+              <div className="flex items-center gap-3 ml-2 pl-3 border-l border-border">
+                <span className="text-sm text-muted-foreground">{user.username}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={handleLogout}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  Logout
-                </button>
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}

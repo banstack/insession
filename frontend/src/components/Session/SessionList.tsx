@@ -2,26 +2,30 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { sessionsApi } from '../../services/api';
 import type { Session, Activity } from '../../types';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Plus, Target } from 'lucide-react';
 
 const ActivityBar = ({ activities, totalMinutes }: { activities: Activity[], totalMinutes: number }) => (
-  <div className="flex h-4 rounded-lg overflow-hidden bg-gray-100">
+  <div className="flex h-3 rounded-full overflow-hidden bg-secondary">
     {activities.map((activity) => {
       const percentage = (activity.durationMinutes / totalMinutes) * 100;
       return (
         <div
           key={activity.id}
-          className="h-full flex items-center justify-center overflow-hidden"
+          className="h-full flex items-center justify-center overflow-hidden transition-all"
           style={{
             width: `${percentage}%`,
-            backgroundColor: activity.completed ? activity.color : '#d1d5db',
+            backgroundColor: activity.completed ? activity.color : '#3f3f46',
           }}
           title={`${activity.name}: ${activity.durationMinutes} min${activity.completed ? '' : ' (incomplete)'}`}
         >
           <span
-            className="text-xs font-medium truncate px-1"
+            className="text-[10px] font-medium truncate px-1"
             style={{
-              color: activity.completed ? 'white' : '#6b7280',
-              textShadow: activity.completed ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+              color: activity.completed ? 'white' : '#71717a',
+              textShadow: activity.completed ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
             }}
           >
             {percentage >= 15 ? `${activity.durationMinutes}m` : ''}
@@ -85,32 +89,32 @@ export default function SessionList() {
     return session.status;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): "success" | "warning" | "info" | "secondary" => {
     switch (status) {
       case 'COMPLETED':
-        return 'bg-green-100 text-green-700';
+        return 'success';
       case 'INCOMPLETE':
-        return 'bg-orange-100 text-orange-700';
+        return 'warning';
       case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-700';
+        return 'info';
       case 'PAUSED':
-        return 'bg-yellow-100 text-yellow-700';
+        return 'warning';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'secondary';
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-500">Loading sessions...</div>
+        <div className="text-muted-foreground">Loading sessions...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 text-red-500 p-4 rounded-lg">
+      <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">
         {error}
       </div>
     );
@@ -118,26 +122,28 @@ export default function SessionList() {
 
   if (sessions.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-400 text-6xl mb-4">🎯</div>
-        <h3 className="text-xl font-medium text-gray-900 mb-2">No sessions yet</h3>
-        <p className="text-gray-500 mb-6">Create your first focused work session</p>
-        <Link
-          to="/new"
-          className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          Create Session
-        </Link>
+      <div className="text-center py-16">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-4">
+          <Target className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h3 className="text-xl font-semibold text-foreground mb-2">No sessions yet</h3>
+        <p className="text-muted-foreground mb-6">Create your first focused work session</p>
+        <Button asChild>
+          <Link to="/new">
+            <Plus className="w-4 h-4" />
+            Create Session
+          </Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {sessions.map((session) => (
-        <div
+        <Card
           key={session.id}
-          className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
+          className="p-4 hover:border-foreground/20 transition-all group"
         >
           <Link to={`/session/${session.id}`} className="block">
             <div className="flex items-center justify-between mb-3">
@@ -145,31 +151,30 @@ export default function SessionList() {
                 {session.activities.slice(0, 4).map((activity, i) => (
                   <div
                     key={i}
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full ring-1 ring-background"
                     style={{ backgroundColor: activity.color }}
                   />
                 ))}
                 {session.activities.length > 4 && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-muted-foreground">
                     +{session.activities.length - 4}
                   </span>
                 )}
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(getDisplayStatus(session))}`}>
+              <Badge variant={getStatusVariant(getDisplayStatus(session))}>
                 {getDisplayStatus(session).replace('_', ' ')}
-              </span>
+              </Badge>
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">
-                {session.activities.length} activities • {getTotalMinutes(session)} min
+              <span className="text-muted-foreground">
+                {session.activities.length} activities &bull; {getTotalMinutes(session)} min
               </span>
-              <span className="text-gray-400">
+              <span className="text-muted-foreground/60">
                 {formatDate(session.createdAt)}
               </span>
             </div>
 
-            {/* Activity breakdown bar */}
             <div className="mt-3 w-1/2">
               <ActivityBar
                 activities={session.activities}
@@ -178,25 +183,25 @@ export default function SessionList() {
             </div>
           </Link>
 
-          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-            <button
+          <div className="mt-3 pt-3 border-t border-border flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={(e) => handleDelete(e, session.id)}
               disabled={deleting === session.id}
-              className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50 flex items-center gap-1"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               {deleting === session.id ? (
                 'Deleting...'
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  <Trash2 className="w-4 h-4" />
                   Delete
                 </>
               )}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

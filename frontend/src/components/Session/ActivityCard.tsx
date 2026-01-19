@@ -1,3 +1,7 @@
+import { cn } from '@/lib/utils';
+import { X, Check, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 interface ActivityCardProps {
   name: string;
   durationMinutes: number;
@@ -28,33 +32,34 @@ export default function ActivityCard({
 
   return (
     <div
-      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
-        isActive
-          ? 'border-blue-500 bg-blue-50'
-          : completed
-          ? 'border-green-500 bg-green-50'
-          : 'border-gray-200 bg-white'
-      }`}
+      className={cn(
+        "flex items-center justify-between p-4 rounded-lg border transition-all",
+        isActive && "border-info bg-info/5",
+        completed && !isActive && "border-success/50 bg-success/5",
+        !isActive && !completed && "border-border bg-card"
+      )}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-4 h-4 rounded-full"
+          className="w-4 h-4 rounded-full ring-2 ring-background"
           style={{ backgroundColor: color }}
         />
         <div>
-          <p className={`font-medium ${completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+          <p className={cn(
+            "font-medium",
+            completed ? "line-through text-muted-foreground" : "text-foreground"
+          )}>
             {name}
           </p>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">{durationMinutes} min planned</span>
+            <span className="text-muted-foreground">{durationMinutes} min planned</span>
             {hasElapsedTime && (
               <>
-                <span className="text-gray-300">•</span>
-                <span className={`font-medium ${
-                  elapsedSeconds >= plannedSeconds
-                    ? 'text-green-600'
-                    : 'text-orange-500'
-                }`}>
+                <span className="text-muted-foreground/50">&bull;</span>
+                <span className={cn(
+                  "font-medium",
+                  elapsedSeconds >= plannedSeconds ? "text-success" : "text-warning"
+                )}>
                   {formatTime(elapsedSeconds)} actual
                 </span>
               </>
@@ -65,21 +70,27 @@ export default function ActivityCard({
 
       <div className="flex items-center gap-2">
         {completed && (
-          <span className="text-green-500 text-sm font-medium">Done</span>
+          <span className="flex items-center gap-1 text-success text-sm font-medium">
+            <Check className="w-4 h-4" />
+            Done
+          </span>
         )}
         {isActive && (
-          <span className="text-blue-500 text-sm font-medium">Active</span>
+          <span className="flex items-center gap-1 text-info text-sm font-medium">
+            <Play className="w-4 h-4" />
+            Active
+          </span>
         )}
         {onRemove && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onRemove}
-            className="text-red-500 hover:text-red-700 p-1"
+            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
             type="button"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            <X className="w-4 h-4" />
+          </Button>
         )}
       </div>
     </div>

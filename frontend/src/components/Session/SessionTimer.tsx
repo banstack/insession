@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { sessionsApi, labelsApi } from '../../services/api';
 import type { Session, ActivityProgress, CreateActivityInput, Label } from '../../types';
 import ActivityCard from './ActivityCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label as FormLabel } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Play, Pause, Square, Plus, X, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const PRESET_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
@@ -17,11 +23,8 @@ export default function SessionTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Track per-activity elapsed time locally
   const [activityElapsed, setActivityElapsed] = useState<Record<string, number>>({});
-  const lastActivityIndexRef = useRef<number>(0);
 
-  // Add activities form state
   const [showAddForm, setShowAddForm] = useState(false);
   const [pendingActivities, setPendingActivities] = useState<CreateActivityInput[]>([]);
   const [newActivityName, setNewActivityName] = useState('');
@@ -30,14 +33,12 @@ export default function SessionTimer() {
   const [addError, setAddError] = useState('');
   const [labels, setLabels] = useState<Label[]>([]);
 
-  // Fetch labels for color picker
   useEffect(() => {
     labelsApi.list().then(response => setLabels(response.labels)).catch(() => {});
   }, []);
 
   const getLabelForColor = (c: string) => labels.find(l => l.color === c);
 
-  // Load session
   useEffect(() => {
     if (!id) return;
 
@@ -47,7 +48,6 @@ export default function SessionTimer() {
         setElapsedSeconds(data.elapsedSeconds);
         setIsRunning(data.status === 'IN_PROGRESS');
 
-        // Initialize activity elapsed times from saved data
         const elapsed: Record<string, number> = {};
         data.activities.forEach(a => {
           elapsed[a.id] = a.elapsedSeconds || 0;
@@ -71,7 +71,6 @@ export default function SessionTimer() {
     return session.activities.length - 1;
   }, [session, elapsedSeconds]);
 
-  // Timer logic - also tracks per-activity time
   useEffect(() => {
     if (!isRunning || !session) return;
 
@@ -79,7 +78,6 @@ export default function SessionTimer() {
       setElapsedSeconds((prev) => {
         const newElapsed = prev + 1;
 
-        // Update current activity's elapsed time
         const currentIndex = getCurrentActivityIndex();
         const currentActivity = session.activities[currentIndex];
 
@@ -97,7 +95,6 @@ export default function SessionTimer() {
     return () => clearInterval(interval);
   }, [isRunning, session, getCurrentActivityIndex]);
 
-  // Build activity progress for API
   const getActivityProgress = useCallback((): ActivityProgress[] => {
     if (!session) return [];
 
@@ -116,7 +113,6 @@ export default function SessionTimer() {
     });
   }, [session, elapsedSeconds, activityElapsed]);
 
-  // Auto-save progress every 10 seconds
   useEffect(() => {
     if (!session || !id) return;
 
@@ -202,7 +198,6 @@ export default function SessionTimer() {
       return;
     }
 
-    // Check for duplicate names in pending activities
     const lowerName = newActivityName.trim().toLowerCase();
     const existsInPending = pendingActivities.some(
       a => a.name.trim().toLowerCase() === lowerName
@@ -241,7 +236,6 @@ export default function SessionTimer() {
       const updatedSession = await sessionsApi.addActivities(id, pendingActivities);
       setSession(updatedSession);
 
-      // Initialize elapsed times for new activities
       const newElapsed = { ...activityElapsed };
       updatedSession.activities.forEach(a => {
         if (!(a.id in newElapsed)) {
@@ -250,7 +244,6 @@ export default function SessionTimer() {
       });
       setActivityElapsed(newElapsed);
 
-      // Reset form
       setPendingActivities([]);
       setShowAddForm(false);
       setAddError('');
@@ -259,18 +252,16 @@ export default function SessionTimer() {
     }
   };
 
-  // Determine if session allows adding activities
   const canAddActivities = () => {
     if (!session) return false;
     const allDone = session.activities.every(a => a.completed);
-    // Allow if not COMPLETED, or if COMPLETED but not all activities done (INCOMPLETE)
     return session.status !== 'COMPLETED' || !allDone;
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading session...</div>
+        <div className="text-muted-foreground">Loading session...</div>
       </div>
     );
   }
@@ -278,13 +269,10 @@ export default function SessionTimer() {
   if (error || !session) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <div className="text-red-500">{error || 'Session not found'}</div>
-        <button
-          onClick={() => navigate('/')}
-          className="text-blue-600 hover:text-blue-800"
-        >
+        <div className="text-destructive">{error || 'Session not found'}</div>
+        <Button variant="ghost" onClick={() => navigate('/')}>
           Go back home
-        </button>
+        </Button>
       </div>
     );
   }
@@ -300,13 +288,8 @@ export default function SessionTimer() {
     <div className="max-w-2xl mx-auto p-6">
       {/* Progress Bar */}
       <div className="mb-8">
-        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-600 transition-all duration-1000"
-            style={{ width: `${Math.min(progress, 100)}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-sm text-gray-500 mt-2">
+        <Progress value={Math.min(progress, 100)} className="h-3" />
+        <div className="flex justify-between text-sm text-muted-foreground mt-2">
           <span>{formatTime(elapsedSeconds)}</span>
           <span>{formatTime(totalSeconds)}</span>
         </div>
@@ -315,16 +298,16 @@ export default function SessionTimer() {
       {/* Current Activity */}
       <div className="text-center mb-8">
         <div
-          className="w-16 h-16 rounded-full mx-auto mb-4"
+          className="w-20 h-20 rounded-full mx-auto mb-6 ring-4 ring-background shadow-lg"
           style={{ backgroundColor: currentActivity?.color || '#3B82F6' }}
         />
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           {isComplete ? 'Session Complete!' : currentActivity?.name}
         </h1>
-        <div className="text-6xl font-mono font-bold text-gray-900 mb-4">
+        <div className="text-7xl font-mono font-bold text-foreground mb-4 tracking-tight">
           {isComplete ? '00:00' : formatTime(remaining)}
         </div>
-        <p className="text-gray-500">
+        <p className="text-muted-foreground">
           {isComplete
             ? 'Great work!'
             : `Activity ${currentIndex + 1} of ${session.activities.length}`}
@@ -332,30 +315,45 @@ export default function SessionTimer() {
       </div>
 
       {/* Controls */}
-      <div className="flex justify-center gap-4 mb-8">
+      <div className="flex justify-center gap-3 mb-8">
         {!isComplete && (
-          <button
+          <Button
             onClick={handlePlayPause}
-            className={`px-8 py-3 rounded-full font-medium text-white transition-colors ${
+            size="lg"
+            className={cn(
+              "px-8",
               isRunning
-                ? 'bg-yellow-500 hover:bg-yellow-600'
-                : 'bg-green-500 hover:bg-green-600'
-            }`}
+                ? "bg-warning hover:bg-warning/90 text-warning-foreground"
+                : "bg-success hover:bg-success/90 text-success-foreground"
+            )}
           >
-            {isRunning ? 'Pause' : 'Start'}
-          </button>
+            {isRunning ? (
+              <>
+                <Pause className="w-5 h-5" />
+                Pause
+              </>
+            ) : (
+              <>
+                <Play className="w-5 h-5" />
+                Start
+              </>
+            )}
+          </Button>
         )}
-        <button
+        <Button
           onClick={handleComplete}
-          className="px-8 py-3 rounded-full font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+          variant="secondary"
+          size="lg"
+          className="px-8"
         >
+          <Square className="w-5 h-5" />
           {isComplete ? 'Done' : 'End Session'}
-        </button>
+        </Button>
       </div>
 
       {/* Activities List */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">Activities</h2>
+        <h2 className="text-lg font-semibold text-foreground">Activities</h2>
         {session.activities.map((activity, index) => {
           let accumulatedBefore = 0;
           for (let i = 0; i < index; i++) {
@@ -381,68 +379,70 @@ export default function SessionTimer() {
 
       {/* Add Activities Section */}
       {canAddActivities() && (
-        <div className="mt-6 border-t pt-6">
+        <div className="mt-6 border-t border-border pt-6">
           {!showAddForm ? (
-            <button
+            <Button
+              variant="outline"
+              className="w-full border-dashed"
               onClick={() => setShowAddForm(true)}
-              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
             >
-              + Add Activities
-            </button>
+              <Plus className="w-4 h-4" />
+              Add Activities
+            </Button>
           ) : (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">Add Activities</h3>
-                <button
+                <h3 className="text-lg font-semibold text-foreground">Add Activities</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setShowAddForm(false);
                     setPendingActivities([]);
                     setAddError('');
                   }}
-                  className="text-gray-500 hover:text-gray-700"
                 >
+                  <X className="w-4 h-4" />
                   Cancel
-                </button>
+                </Button>
               </div>
 
               {addError && (
-                <div className="text-red-500 text-sm">{addError}</div>
+                <div className="text-destructive text-sm">{addError}</div>
               )}
 
               {/* New Activity Form */}
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
-                  <label className="block text-sm text-gray-600 mb-1">Name</label>
-                  <input
+                  <FormLabel>Name</FormLabel>
+                  <Input
                     type="text"
                     value={newActivityName}
                     onChange={(e) => setNewActivityName(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Activity name"
+                    className="mt-1"
                   />
                 </div>
                 <div className="w-24">
-                  <label className="block text-sm text-gray-600 mb-1">Minutes</label>
-                  <input
+                  <FormLabel>Minutes</FormLabel>
+                  <Input
                     type="number"
                     value={newActivityDuration}
                     onChange={(e) => setNewActivityDuration(Math.max(1, parseInt(e.target.value) || 1))}
                     min="1"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="mt-1"
                   />
                 </div>
-                <button
-                  onClick={handleAddPendingActivity}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
+                <Button onClick={handleAddPendingActivity}>
+                  <Plus className="w-4 h-4" />
                   Add
-                </button>
+                </Button>
               </div>
 
               {/* Color/Label Picker */}
               <div>
-                <label className="block text-sm text-gray-600 mb-2">Color</label>
-                <div className="flex gap-3 flex-wrap">
+                <FormLabel>Color</FormLabel>
+                <div className="flex gap-3 flex-wrap mt-2">
                   {PRESET_COLORS.map((c) => {
                     const label = getLabelForColor(c);
                     return (
@@ -450,15 +450,16 @@ export default function SessionTimer() {
                         key={c}
                         type="button"
                         onClick={() => setNewActivityColor(c)}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                          newActivityColor === c ? 'bg-gray-100 ring-2 ring-gray-900' : 'hover:bg-gray-50'
-                        }`}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-2 rounded-lg transition-all",
+                          newActivityColor === c ? "bg-secondary ring-2 ring-foreground" : "hover:bg-secondary/50"
+                        )}
                       >
                         <div
                           className="w-8 h-8 rounded-full"
                           style={{ backgroundColor: c }}
                         />
-                        <span className="text-xs text-gray-600 max-w-[60px] truncate">
+                        <span className="text-xs text-muted-foreground max-w-[60px] truncate">
                           {label?.name || c}
                         </span>
                       </button>
@@ -470,34 +471,37 @@ export default function SessionTimer() {
               {/* Pending Activities List */}
               {pendingActivities.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Activities to add:</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">Activities to add:</h4>
                   {pendingActivities.map((activity, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-secondary rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: activity.color }}
                         />
-                        <span className="font-medium">{activity.name}</span>
-                        <span className="text-gray-500">{activity.durationMinutes} min</span>
+                        <span className="font-medium text-foreground">{activity.name}</span>
+                        <span className="text-muted-foreground">{activity.durationMinutes} min</span>
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleRemovePendingActivity(index)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-destructive hover:text-destructive"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                   ))}
-                  <button
+                  <Button
                     onClick={handleSubmitActivities}
-                    className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    className="w-full bg-success hover:bg-success/90 text-success-foreground"
                   >
+                    <Check className="w-4 h-4" />
                     Add {pendingActivities.length} {pendingActivities.length === 1 ? 'Activity' : 'Activities'}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

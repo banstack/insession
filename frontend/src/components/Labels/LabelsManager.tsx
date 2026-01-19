@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { labelsApi } from '../../services/api';
 import type { Label } from '../../types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Pencil, Trash2, Check, X } from 'lucide-react';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -92,25 +96,25 @@ export default function LabelsManager() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <div className="text-gray-500">Loading labels...</div>
+        <div className="text-muted-foreground">Loading labels...</div>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Color Labels</h1>
-      <p className="text-gray-600 mb-6">
+      <h1 className="text-2xl font-bold text-foreground mb-2">Color Labels</h1>
+      <p className="text-muted-foreground mb-6">
         Assign custom labels to colors to categorize your activities (e.g., "Productivity", "Exercise").
       </p>
 
       {error && (
-        <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm mb-4">
+        <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm mb-4 border border-destructive/20">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-200">
+      <Card className="divide-y divide-border">
         {COLORS.map(color => {
           const label = getLabelForColor(color);
           const isEditing = editingColor === color;
@@ -119,65 +123,72 @@ export default function LabelsManager() {
             <div key={color} className="p-4">
               <div className="flex items-center gap-4">
                 <div
-                  className="w-10 h-10 rounded-full flex-shrink-0"
+                  className="w-10 h-10 rounded-full flex-shrink-0 ring-2 ring-background"
                   style={{ backgroundColor: color }}
                 />
 
                 {isEditing ? (
                   <div className="flex-1 flex items-center gap-2">
-                    <input
+                    <Input
                       type="text"
                       value={editingName}
                       onChange={(e) => setEditingName(e.target.value)}
                       placeholder="Enter label name"
                       maxLength={50}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleSave();
                         if (e.key === 'Escape') handleCancel();
                       }}
                     />
-                    <button
+                    <Button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      size="sm"
                     >
+                      <Check className="w-4 h-4" />
                       Save
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={handleCancel}
                       disabled={saving}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                      variant="secondary"
+                      size="sm"
                     >
+                      <X className="w-4 h-4" />
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="flex-1 flex items-center justify-between">
                     <div>
                       {label ? (
-                        <span className="font-medium text-gray-900">{label.name}</span>
+                        <span className="font-medium text-foreground">{label.name}</span>
                       ) : (
-                        <span className="text-gray-400 italic">No label</span>
+                        <span className="text-muted-foreground italic">No label</span>
                       )}
-                      <span className="ml-2 text-sm text-gray-400">{color}</span>
+                      <span className="ml-2 text-sm text-muted-foreground/60">{color}</span>
                     </div>
                     <div className="flex gap-2">
-                      <button
+                      <Button
                         onClick={() => handleEdit(color)}
-                        className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        variant="secondary"
+                        size="sm"
                       >
+                        <Pencil className="w-4 h-4" />
                         {label ? 'Edit' : 'Add Label'}
-                      </button>
+                      </Button>
                       {label && (
-                        <button
+                        <Button
                           onClick={() => handleDelete(color)}
                           disabled={saving}
-                          className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 transition-colors"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
+                          <Trash2 className="w-4 h-4" />
                           Delete
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -186,7 +197,7 @@ export default function LabelsManager() {
             </div>
           );
         })}
-      </div>
+      </Card>
     </div>
   );
 }

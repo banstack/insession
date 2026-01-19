@@ -15,8 +15,8 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -35,10 +35,10 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-background">
               <Navbar />
               <main className="max-w-4xl mx-auto py-8 px-4">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">Your Sessions</h1>
+                <h1 className="text-2xl font-bold text-foreground mb-6">Your Sessions</h1>
                 <SessionList />
               </main>
             </div>
@@ -49,7 +49,7 @@ function AppRoutes() {
         path="/new"
         element={
           <ProtectedRoute>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-background">
               <Navbar />
               <main className="py-8 px-4">
                 <CreateSession />
@@ -62,7 +62,7 @@ function AppRoutes() {
         path="/session/:id"
         element={
           <ProtectedRoute>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-background">
               <Navbar />
               <main className="py-8 px-4">
                 <SessionTimer />
@@ -75,7 +75,7 @@ function AppRoutes() {
         path="/labels"
         element={
           <ProtectedRoute>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-background">
               <Navbar />
               <main className="py-8 px-4">
                 <LabelsManager />

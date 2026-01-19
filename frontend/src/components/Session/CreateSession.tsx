@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { sessionsApi, labelsApi } from '../../services/api';
 import type { CreateActivityInput, Label } from '../../types';
 import ActivityCard from './ActivityCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label as FormLabel } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Play } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -66,94 +72,91 @@ export default function CreateSession() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Create New Session</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">Create New Session</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
+          <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm border border-destructive/20">
             {error}
           </div>
         )}
 
-        {/* Add Activity Form */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Activity</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Add Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-1">
+                <FormLabel>Name</FormLabel>
+                <Input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Deep Work"
+                  className="mt-1"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Deep Work"
-              />
-            </div>
+              <div>
+                <FormLabel>Duration (min)</FormLabel>
+                <Input
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Duration (min)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={180}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Color
-              </label>
-              <div className="flex gap-3 flex-wrap">
-                {COLORS.map((c) => {
-                  const label = getLabelForColor(c);
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setColor(c)}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                        color === c ? 'bg-gray-100 ring-2 ring-gray-900' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div
-                        className="w-8 h-8 rounded-full"
-                        style={{ backgroundColor: c }}
-                      />
-                      <span className="text-xs text-gray-600 max-w-[60px] truncate">
-                        {label?.name || c}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="md:col-span-3">
+                <FormLabel>Color</FormLabel>
+                <div className="flex gap-3 flex-wrap mt-2">
+                  {COLORS.map((c) => {
+                    const label = getLabelForColor(c);
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setColor(c)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-2 rounded-lg transition-all",
+                          color === c ? "bg-secondary ring-2 ring-foreground" : "hover:bg-secondary/50"
+                        )}
+                      >
+                        <div
+                          className="w-8 h-8 rounded-full"
+                          style={{ backgroundColor: c }}
+                        />
+                        <span className="text-xs text-muted-foreground max-w-[60px] truncate">
+                          {label?.name || c}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={addActivity}
-            className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            + Add Activity
-          </button>
-        </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={addActivity}
+            >
+              <Plus className="w-4 h-4" />
+              Add Activity
+            </Button>
+          </CardContent>
+        </Card>
 
-        {/* Activities List */}
         {activities.length > 0 && (
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 Activities ({activities.length})
               </h2>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 Total: {totalMinutes} minutes
               </span>
             </div>
@@ -170,14 +173,15 @@ export default function CreateSession() {
           </div>
         )}
 
-        {/* Submit Button */}
-        <button
+        <Button
           type="submit"
+          className="w-full"
+          size="lg"
           disabled={loading || activities.length === 0}
-          className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
+          <Play className="w-4 h-4" />
           {loading ? 'Creating...' : 'Start Session'}
-        </button>
+        </Button>
       </form>
     </div>
   );
