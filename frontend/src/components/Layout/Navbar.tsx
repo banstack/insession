@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Button } from '@/components/ui/button';
-import { Plus, Tag, LogOut } from 'lucide-react';
+import { Plus, Tag, LogOut, Sun, Moon } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = async () => {
     try {
@@ -40,6 +42,14 @@ export default function Navbar() {
 
               <div className="flex items-center gap-3 ml-2 pl-3 border-l border-border">
                 <span className="text-sm text-muted-foreground">{user.username}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleTheme}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
