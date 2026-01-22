@@ -7,7 +7,6 @@ import ActivityCard from './ActivityCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label as FormLabel } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, Plus, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -87,7 +86,6 @@ export default function SessionTimer() {
     return 0;
   })() : 0;
 
-  const progress = totalSeconds > 0 ? (elapsedSeconds / totalSeconds) * 100 : 0;
   const isComplete = session?.status === 'COMPLETED' || (totalSeconds > 0 && elapsedSeconds >= totalSeconds);
 
   // Local UI state
@@ -238,9 +236,49 @@ export default function SessionTimer() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      {/* Progress Bar */}
+      {/* Segmented Progress Bar */}
       <div className="mb-8">
-        <Progress value={Math.min(progress, 100)} className="h-3" />
+        <div className="flex h-3 w-full overflow-hidden rounded-full bg-secondary">
+          {session.activities.map((activity, index) => {
+            const segmentWidth = (activity.durationSeconds / totalSeconds) * 100;
+            let accumulatedBefore = 0;
+            for (let i = 0; i < index; i++) {
+              accumulatedBefore += session.activities[i].durationSeconds;
+            }
+            const activityEnd = accumulatedBefore + activity.durationSeconds;
+
+            // Calculate fill percentage for this segment
+            let fillPercent = 0;
+            if (elapsedSeconds >= activityEnd) {
+              fillPercent = 100; // Fully complete
+            } else if (elapsedSeconds > accumulatedBefore) {
+              fillPercent = ((elapsedSeconds - accumulatedBefore) / activity.durationSeconds) * 100;
+            }
+
+            const isActive = index === currentActivityIndex && !isComplete;
+
+            return (
+              <div
+                key={activity.id}
+                className="relative h-full overflow-hidden"
+                style={{ width: `${segmentWidth}%` }}
+              >
+                {/* Filled portion */}
+                <div
+                  className="h-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${fillPercent}%`,
+                    backgroundColor: activity.color,
+                  }}
+                />
+                {/* Segment divider */}
+                {index < session.activities.length - 1 && (
+                  <div className="absolute right-0 top-0 h-full w-0.5 bg-background" />
+                )}
+              </div>
+            );
+          })}
+        </div>
         <div className="flex justify-between text-sm text-muted-foreground mt-2">
           <span>{formatTime(elapsedSeconds)}</span>
           <span>{formatTime(totalSeconds)}</span>
@@ -313,7 +351,6 @@ export default function SessionTimer() {
           }
           const isCompleted = elapsedSeconds >= accumulatedBefore + activity.durationSeconds;
           const isActive = index === currentActivityIndex && !isComplete;
-          const actualElapsed = activityElapsed[activity.id] || activity.elapsedSeconds || 0;
 
           return (
             <ActivityCard
@@ -323,7 +360,6 @@ export default function SessionTimer() {
               color={activity.color}
               completed={isCompleted}
               isActive={isActive}
-              elapsedSeconds={actualElapsed}
             />
           );
         })}

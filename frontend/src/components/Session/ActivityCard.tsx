@@ -8,14 +8,7 @@ interface ActivityCardProps {
   color: string;
   completed?: boolean;
   isActive?: boolean;
-  elapsedSeconds?: number;
   onRemove?: () => void;
-}
-
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 export default function ActivityCard({
@@ -24,11 +17,8 @@ export default function ActivityCard({
   color,
   completed = false,
   isActive = false,
-  elapsedSeconds,
   onRemove,
 }: ActivityCardProps) {
-  const plannedSeconds = durationMinutes * 60;
-  const hasElapsedTime = elapsedSeconds !== undefined && elapsedSeconds > 0;
 
   return (
     <div
@@ -51,20 +41,7 @@ export default function ActivityCard({
           )}>
             {name}
           </p>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">{durationMinutes} min planned</span>
-            {hasElapsedTime && (
-              <>
-                <span className="text-muted-foreground/50">&bull;</span>
-                <span className={cn(
-                  "font-medium",
-                  elapsedSeconds >= plannedSeconds ? "text-success" : "text-warning"
-                )}>
-                  {formatTime(elapsedSeconds)} actual
-                </span>
-              </>
-            )}
-          </div>
+          <p className="text-sm text-muted-foreground">{durationMinutes} min</p>
         </div>
       </div>
 

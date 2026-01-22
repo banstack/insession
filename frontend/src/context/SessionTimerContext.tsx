@@ -102,26 +102,24 @@ export function SessionTimerProvider({ children }: { children: ReactNode }) {
     if (!isRunning || !session) return;
 
     const interval = setInterval(() => {
-      setElapsedSeconds((prev) => {
-        const newElapsed = prev + 1;
-        elapsedSecondsRef.current = newElapsed;
+      // Update elapsed seconds using ref to avoid stale closure
+      const newElapsed = elapsedSecondsRef.current + 1;
+      elapsedSecondsRef.current = newElapsed;
+      setElapsedSeconds(newElapsed);
 
-        const currentIndex = getCurrentActivityIndex();
-        const currentActivity = sessionRef.current?.activities[currentIndex];
+      // Update activity elapsed separately (not nested in state updater)
+      const currentIndex = getCurrentActivityIndex();
+      const currentActivity = sessionRef.current?.activities[currentIndex];
 
-        if (currentActivity) {
-          setActivityElapsed(prevActivity => {
-            const updated = {
-              ...prevActivity,
-              [currentActivity.id]: (prevActivity[currentActivity.id] || 0) + 1
-            };
-            activityElapsedRef.current = updated;
-            return updated;
-          });
-        }
-
-        return newElapsed;
-      });
+      if (currentActivity) {
+        const currentActivityElapsed = activityElapsedRef.current;
+        const updated = {
+          ...currentActivityElapsed,
+          [currentActivity.id]: (currentActivityElapsed[currentActivity.id] || 0) + 1
+        };
+        activityElapsedRef.current = updated;
+        setActivityElapsed(updated);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
