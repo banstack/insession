@@ -80,6 +80,17 @@ export const sessionsApi = {
       method: 'POST',
       body: JSON.stringify({ activities }),
     }),
+
+  reorderActivities: (id: string, activityIds: string[]) =>
+    request<Session>(`/sessions/${id}/activities/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify({ activityIds }),
+    }),
+
+  deleteActivity: (sessionId: string, activityId: string) =>
+    request<Session>(`/sessions/${sessionId}/activities/${activityId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // Labels API

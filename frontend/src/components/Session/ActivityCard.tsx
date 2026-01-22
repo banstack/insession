@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { X, Check, Play } from 'lucide-react';
+import { GripVertical, Trash2, Check, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ActivityCardProps {
@@ -8,7 +8,14 @@ interface ActivityCardProps {
   color: string;
   completed?: boolean;
   isActive?: boolean;
-  onRemove?: () => void;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  draggable?: boolean;
+  onDelete?: () => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: () => void;
 }
 
 export default function ActivityCard({
@@ -17,19 +24,38 @@ export default function ActivityCard({
   color,
   completed = false,
   isActive = false,
-  onRemove,
+  isDragging = false,
+  isDragOver = false,
+  draggable = false,
+  onDelete,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
 }: ActivityCardProps) {
 
   return (
     <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       className={cn(
         "flex items-center justify-between p-4 rounded-lg border transition-all",
         isActive && "border-info bg-info/5",
         completed && !isActive && "border-success/50 bg-success/5",
-        !isActive && !completed && "border-border bg-card"
+        !isActive && !completed && "border-border bg-card",
+        isDragging && "opacity-50 border-dashed",
+        isDragOver && "border-primary border-2"
       )}
     >
       <div className="flex items-center gap-3">
+        {draggable && (
+          <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
         <div
           className="w-4 h-4 rounded-full ring-2 ring-background"
           style={{ backgroundColor: color }}
@@ -58,15 +84,15 @@ export default function ActivityCard({
             Active
           </span>
         )}
-        {onRemove && (
+        {onDelete && (
           <Button
             variant="ghost"
             size="icon"
-            onClick={onRemove}
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={onDelete}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             type="button"
           >
-            <X className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" />
           </Button>
         )}
       </div>

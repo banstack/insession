@@ -97,6 +97,10 @@ export default function SessionTimer() {
   const [addError, setAddError] = useState('');
   const [labels, setLabels] = useState<Label[]>([]);
 
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   useEffect(() => {
     labelsApi.list().then(response => setLabels(response.labels)).catch(() => {});
   }, []);
@@ -215,6 +219,95 @@ export default function SessionTimer() {
     return session.status !== 'COMPLETED' || !allDone;
   };
 
+  const canEditActivities = () => {
+    return session && session.status !== 'COMPLETED' && !isRunning;
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = async (targetIndex: number) => {
+    if (draggedIndex === null || draggedIndex === targetIndex || !session || !id) {
+      handleDragEnd();
+      return;
+    }
+
+    // Reorder activities locally first for optimistic UI
+    const newActivities = [...session.activities];
+    const [draggedActivity] = newActivities.splice(draggedIndex, 1);
+    newActivities.splice(targetIndex, 0, draggedActivity);
+
+    // Update local state optimistically
+    const updatedSession = { ...session, activities: newActivities };
+    if (isViewingContextSession) {
+      setSession(updatedSession);
+    } else {
+      setLocalSession(updatedSession);
+    }
+
+    handleDragEnd();
+
+    // Persist to backend
+    try {
+      const activityIds = newActivities.map(a => a.id);
+      await sessionsApi.reorderActivities(id, activityIds);
+    } catch (err) {
+      // Revert on error by refetching
+      console.error('Failed to reorder activities:', err);
+      const data = await sessionsApi.get(id);
+      if (isViewingContextSession) {
+        setSession(data);
+      } else {
+        setLocalSession(data);
+      }
+    }
+  };
+
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!session || !id) return;
+
+    // Don't allow deleting if only one activity remains
+    if (session.activities.length <= 1) {
+      return;
+    }
+
+    // Optimistic update
+    const newActivities = session.activities.filter(a => a.id !== activityId);
+    const updatedSession = { ...session, activities: newActivities };
+    if (isViewingContextSession) {
+      setSession(updatedSession);
+    } else {
+      setLocalSession(updatedSession);
+    }
+
+    // Persist to backend
+    try {
+      await sessionsApi.deleteActivity(id, activityId);
+    } catch (err) {
+      // Revert on error by refetching
+      console.error('Failed to delete activity:', err);
+      const data = await sessionsApi.get(id);
+      if (isViewingContextSession) {
+        setSession(data);
+      } else {
+        setLocalSession(data);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -254,8 +347,6 @@ export default function SessionTimer() {
             } else if (elapsedSeconds > accumulatedBefore) {
               fillPercent = ((elapsedSeconds - accumulatedBefore) / activity.durationSeconds) * 100;
             }
-
-            const isActive = index === currentActivityIndex && !isComplete;
 
             return (
               <div
@@ -350,7 +441,8 @@ export default function SessionTimer() {
             accumulatedBefore += session.activities[i].durationSeconds;
           }
           const isCompleted = elapsedSeconds >= accumulatedBefore + activity.durationSeconds;
-          const isActive = index === currentActivityIndex && !isComplete;
+          const isActivityActive = index === currentActivityIndex && !isComplete;
+          const canEdit = canEditActivities();
 
           return (
             <ActivityCard
@@ -359,7 +451,15 @@ export default function SessionTimer() {
               durationMinutes={activity.durationMinutes}
               color={activity.color}
               completed={isCompleted}
-              isActive={isActive}
+              isActive={isActivityActive}
+              draggable={canEdit ?? false}
+              isDragging={draggedIndex === index}
+              isDragOver={dragOverIndex === index}
+              onDragStart={() => handleDragStart(index)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={() => handleDrop(index)}
+              onDelete={canEdit && session.activities.length > 1 ? () => handleDeleteActivity(activity.id) : undefined}
             />
           );
         })}
