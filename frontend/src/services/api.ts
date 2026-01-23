@@ -1,6 +1,7 @@
 import type { User, Session, CreateActivityInput, SessionsResponse, ActivityProgress, Label, LabelsResponse } from '../types';
 
-const API_BASE = '/api/v1';
+// Use environment variable for production, fallback to /api/v1 for local dev (Vite proxy)
+const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
