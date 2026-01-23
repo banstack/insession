@@ -11,10 +11,12 @@ export class AuthController {
       const { user, token } = await authService.register(req.body);
 
       // Set HTTP-only cookie
+      // Use 'none' for cross-origin (different domains), 'strict' for same-origin
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('insession_token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: true, // Always true for HTTPS (Railway uses HTTPS)
+        sameSite: isProduction ? 'none' : 'strict', // 'none' allows cross-origin cookies
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -30,10 +32,11 @@ export class AuthController {
       const { user, token } = await authService.login(req.body);
 
       // Set HTTP-only cookie
+      const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('insession_token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: true,
+        sameSite: isProduction ? 'none' : 'strict',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
@@ -45,7 +48,12 @@ export class AuthController {
   }
 
   async logout(req: Request, res: Response) {
-    res.clearCookie('insession_token');
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.clearCookie('insession_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: isProduction ? 'none' : 'strict',
+    });
     res.status(200).json({ message: 'Logged out successfully' });
   }
 
