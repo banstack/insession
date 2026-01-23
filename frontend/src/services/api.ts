@@ -2,13 +2,23 @@ import type { User, Session, CreateActivityInput, SessionsResponse, ActivityProg
 
 // Use environment variable for production, fallback to /api/v1 for local dev (Vite proxy)
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+const TOKEN_KEY = 'insession_token';
+
+// Token management
+export const tokenStorage = {
+  get: () => localStorage.getItem(TOKEN_KEY),
+  set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
+  remove: () => localStorage.removeItem(TOKEN_KEY),
+};
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = tokenStorage.get();
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options?.headers,
     },
   });
@@ -28,13 +38,13 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 // Auth API
 export const authApi = {
   register: (data: { username: string; email: string; password: string }) =>
-    request<{ user: User }>('/auth/register', {
+    request<{ user: User; token: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   login: (data: { email: string; password: string }) =>
-    request<{ user: User }>('/auth/login', {
+    request<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

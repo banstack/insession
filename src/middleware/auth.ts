@@ -11,7 +11,13 @@ export interface AuthRequest extends Request {
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.insession_token;
+    // Check Authorization header first (for cross-origin/Safari), then fall back to cookie
+    let token = req.cookies.insession_token;
+
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    }
 
     if (!token) {
       res.status(401).json({ error: 'Authentication required' });

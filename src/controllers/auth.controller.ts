@@ -21,7 +21,7 @@ export class AuthController {
         path: '/', // Ensure cookie is sent for all paths
       });
 
-      res.status(201).json({ user });
+      res.status(201).json({ user, token });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Registration failed';
       res.status(400).json({ error: message });
@@ -42,7 +42,7 @@ export class AuthController {
         path: '/',
       });
 
-      res.status(200).json({ user });
+      res.status(200).json({ user, token });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Login failed';
       res.status(401).json({ error: message });

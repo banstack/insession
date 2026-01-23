@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
-import { authApi } from '../services/api';
+import { authApi, tokenStorage } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -25,17 +25,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { user } = await authApi.login({ email, password });
+    const { user, token } = await authApi.login({ email, password });
+    if (token) tokenStorage.set(token);
     setUser(user);
   };
 
   const register = async (username: string, email: string, password: string) => {
-    const { user } = await authApi.register({ username, email, password });
+    const { user, token } = await authApi.register({ username, email, password });
+    if (token) tokenStorage.set(token);
     setUser(user);
   };
 
   const logout = async () => {
     await authApi.logout();
+    tokenStorage.remove();
     setUser(null);
   };
 
