@@ -97,4 +97,20 @@ export class SessionController {
       res.status(400).json({ error: message });
     }
   }
+
+  async deleteActivity(req: AuthRequest, res: Response) {
+    try {
+      const sessionId = req.params.id as string;
+      const activityId = req.params.activityId as string;
+      const session = await sessionService.deleteActivity(
+        sessionId,
+        req.user!.userId,
+        activityId
+      );
+      res.status(200).json(session);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete activity';
+      res.status(400).json({ error: message });
+    }
+  }
 }

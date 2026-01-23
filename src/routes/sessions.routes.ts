@@ -37,4 +37,8 @@ router.post('/:id/activities', validateRequest(addActivitiesSchema), (req, res) 
 
 router.delete('/:id', (req, res) => sessionController.deleteSession(req, res));
 
+router.delete('/:id/activities/:activityId', (req, res) =>
+  sessionController.deleteActivity(req, res)
+);
+
 export default router;

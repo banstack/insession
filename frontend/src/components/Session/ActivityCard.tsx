@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 import { GripVertical, Trash2, Check, Play } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface ActivityCardProps {
   name: string;
@@ -85,15 +84,13 @@ export default function ActivityCard({
           </span>
         )}
         {onDelete && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          <button
             type="button"
+            onClick={onDelete}
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </button>
         )}
       </div>
     </div>

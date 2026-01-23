@@ -316,4 +316,52 @@ export class SessionService {
 
     return updated;
   }
+
+  async deleteActivity(sessionId: string, userId: string, activityId: string) {
+    // Verify ownership and get current session
+    const session = await this.getSession(sessionId, userId);
+
+    // Check if session has more than one activity
+    if (session.activities.length <= 1) {
+      throw new Error('Cannot delete the last activity');
+    }
+
+    // Verify activity belongs to this session
+    const activity = session.activities.find(a => a.id === activityId);
+    if (!activity) {
+      throw new Error('Activity not found');
+    }
+
+    // Delete the activity and reorder remaining ones
+    const updated = await prisma.$transaction(async (tx) => {
+      // Delete the activity
+      await tx.activity.delete({
+        where: { id: activityId },
+      });
+
+      // Reorder remaining activities
+      const remainingActivities = session.activities
+        .filter(a => a.id !== activityId)
+        .sort((a, b) => a.orderIndex - b.orderIndex);
+
+      for (let i = 0; i < remainingActivities.length; i++) {
+        await tx.activity.update({
+          where: { id: remainingActivities[i].id },
+          data: { orderIndex: i },
+        });
+      }
+
+      // Return updated session
+      return tx.session.findUnique({
+        where: { id: sessionId },
+        include: {
+          activities: {
+            orderBy: { orderIndex: 'asc' },
+          },
+        },
+      });
+    });
+
+    return updated;
+  }
 }

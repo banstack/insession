@@ -167,7 +167,7 @@ export default function CreateSession() {
                 name={activity.name}
                 durationMinutes={activity.durationMinutes}
                 color={activity.color}
-                onRemove={() => removeActivity(index)}
+                onDelete={() => removeActivity(index)}
               />
             ))}
           </div>
